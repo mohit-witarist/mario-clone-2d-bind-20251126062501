@@ -1,0 +1,121 @@
+import { TILE_SIZE, GRAVITY, COLORS } from './constants';
+
+class PowerUp {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.width = TILE_SIZE - 4;
+    this.height = TILE_SIZE - 4;
+    this.type = type;
+    this.velX = 2;
+    this.velY = 0;
+    this.active = true;
+    this.emerging = true;
+    this.emergeY = y;
+    this.startY = y + TILE_SIZE;
+    this.y = this.startY;
+    
+    this.animTimer = 0;
+  }
+  
+  update(collisionDetector, tiles, deltaTime) {
+    if (!this.active) return;
+    
+    if (this.emerging) {
+      this.y -= 1;
+      if (this.y <= this.emergeY) {
+        this.y = this.emergeY;
+        this.emerging = false;
+      }
+      return;
+    }
+    
+    if (this.type === 'mushroom') {
+      this.velY += GRAVITY;
+      
+      const response = collisionDetector.resolveCollision(
+        this, this.velX, this.velY, tiles
+      );
+      
+      this.x = response.x;
+      this.y = response.y;
+      this.velY = response.velY;
+      
+      if (response.hitWall) {
+        this.velX = -this.velX;
+      }
+    } else {
+      this.animTimer += deltaTime;
+    }
+  }
+  
+  collect() {
+    this.active = false;
+  }
+  
+  render(ctx, camera) {
+    if (!this.active) return;
+    
+    const screenPos = camera.worldToScreen(this.x, this.y);
+    
+    if (this.type === 'mushroom') {
+      ctx.fillStyle = COLORS.MUSHROOM;
+      ctx.beginPath();
+      ctx.ellipse(
+        screenPos.x + this.width / 2,
+        screenPos.y + 8,
+        this.width / 2,
+        10,
+        0, Math.PI, 0
+      );
+      ctx.fill();
+      
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(screenPos.x + 8, screenPos.y + 6, 4, 0, Math.PI * 2);
+      ctx.arc(screenPos.x + this.width - 8, screenPos.y + 6, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#f5deb3';
+      ctx.fillRect(screenPos.x + 6, screenPos.y + 12, this.width - 12, 14);
+      
+      ctx.fillStyle = '#000';
+      ctx.fillRect(screenPos.x + 10, screenPos.y + 16, 3, 3);
+      ctx.fillRect(screenPos.x + this.width - 13, screenPos.y + 16, 3, 3);
+    } else if (this.type === 'fire_flower') {
+      const bounce = Math.sin(this.animTimer * 5) * 2;
+      
+      ctx.fillStyle = '#00a800';
+      ctx.fillRect(screenPos.x + 12, screenPos.y + 14 + bounce, 4, 14);
+      
+      ctx.fillStyle = COLORS.FIRE_FLOWER;
+      ctx.beginPath();
+      ctx.arc(screenPos.x + this.width / 2, screenPos.y + 10 + bounce, 10, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#ffd700';
+      ctx.beginPath();
+      ctx.arc(screenPos.x + this.width / 2, screenPos.y + 10 + bounce, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      const petalPositions = [
+        { x: -8, y: -8 }, { x: 8, y: -8 },
+        { x: -10, y: 0 }, { x: 10, y: 0 },
+        { x: -8, y: 8 }, { x: 8, y: 8 }
+      ];
+      
+      ctx.fillStyle = '#fff';
+      petalPositions.forEach(pos => {
+        ctx.beginPath();
+        ctx.arc(
+          screenPos.x + this.width / 2 + pos.x,
+          screenPos.y + 10 + bounce + pos.y,
+          4, 0, Math.PI * 2
+        );
+        ctx.fill();
+      });
+    }
+  }
+}
+
+export default PowerUp;

@@ -69,8 +69,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.85);
   z-index: 20;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .overlay-title {
@@ -85,7 +91,7 @@
   font-family: 'Press Start 2P', monospace;
   font-size: 16px;
   color: #fff;
-  margin-bottom: 30px;
+  margin-bottom: 10px;
 }
 
 .restart-btn {
@@ -98,6 +104,7 @@
   cursor: pointer;
   box-shadow: 0 4px 0 #8b0000;
   transition: transform 0.1s;
+  margin-top: 20px;
 }
 
 .restart-btn:hover {
@@ -131,10 +138,10 @@
 
 .controls-info {
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
+  font-size: 8px;
   color: #fff;
   margin-top: 30px;
-  line-height: 2;
+  line-height: 2.2;
 }
 
 .lives-display {
@@ -157,6 +164,7 @@
   color: #000;
   font-size: 8px;
   border-radius: 3px;
+  margin-top: 5px;
 }
 
 .power-indicator.fire {

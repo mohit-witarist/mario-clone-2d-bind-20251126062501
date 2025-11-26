@@ -1,14 +1,19 @@
 export const CANVAS_WIDTH = 800;
 export const CANVAS_HEIGHT = 480;
 export const TILE_SIZE = 32;
-export const GRAVITY = 0.6;
+export const GRAVITY = 0.55;
 export const MAX_FALL_SPEED = 12;
-export const PLAYER_SPEED = 4;
-export const PLAYER_JUMP_FORCE = -12;
-export const PLAYER_ACCELERATION = 0.3;
-export const PLAYER_FRICTION = 0.85;
-export const ENEMY_SPEED = 1;
-export const FIREBALL_SPEED = 8;
+export const PLAYER_SPEED = 5;
+export const PLAYER_RUN_SPEED = 7;
+export const PLAYER_JUMP_FORCE = -13;
+export const PLAYER_JUMP_FORCE_MIN = -7;
+export const PLAYER_ACCELERATION = 0.4;
+export const PLAYER_RUN_ACCELERATION = 0.6;
+export const PLAYER_FRICTION = 0.88;
+export const PLAYER_AIR_FRICTION = 0.95;
+export const ENEMY_SPEED = 1.2;
+export const FIREBALL_SPEED = 7;
+export const FIREBALL_COOLDOWN = 300;
 export const LEVEL_TIME = 300;
 
 export const COLORS = {
@@ -61,6 +66,7 @@ export const GAME_STATES = {
   START: 'start',
   PLAYING: 'playing',
   DEAD: 'dead',
+  DYING: 'dying',
   GAME_OVER: 'game_over',
   WIN: 'win'
 };

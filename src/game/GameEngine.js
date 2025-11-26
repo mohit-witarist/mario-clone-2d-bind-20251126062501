@@ -1,6 +1,6 @@
 import { 
   CANVAS_WIDTH, CANVAS_HEIGHT, TILE_SIZE,
-  GAME_STATES, LEVEL_TIME, BLOCK_TYPES 
+  GAME_STATES, LEVEL_TIME, BLOCK_TYPES, FIREBALL_COOLDOWN
 } from './constants';
 import Player from './Player';
 import Level from './Level';
@@ -39,6 +39,13 @@ class GameEngine {
     this.lastTime = 0;
     this.timeAccumulator = 0;
     
+    this.lastFireballTime = 0;
+    
+    this.deathFadeAlpha = 0;
+    this.deathFadeTimer = 0;
+    this.deathFadeDuration = 1.5;
+    this.deathSequenceComplete = false;
+    
     this.onStateChange = null;
   }
   
@@ -60,6 +67,10 @@ class GameEngine {
     this.fireballs = [];
     this.animatedCoins = [];
     this.camera.x = 0;
+    this.camera.setLevelWidth(this.level.width);
+    this.deathFadeAlpha = 0;
+    this.deathFadeTimer = 0;
+    this.deathSequenceComplete = false;
     this.gameState = GAME_STATES.PLAYING;
     this.notifyStateChange();
   }
@@ -67,6 +78,11 @@ class GameEngine {
   update(currentTime) {
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
+    
+    if (this.gameState === GAME_STATES.DYING) {
+      this.updateDeathSequence(deltaTime);
+      return;
+    }
     
     if (this.gameState !== GAME_STATES.PLAYING) return;
     
@@ -90,14 +106,18 @@ class GameEngine {
       this.handleBlockHit(hitBlock);
     }
     
+    const now = performance.now();
     if (this.input.consumeFire() && this.player.canShootFireball()) {
-      this.shootFireball();
+      if (now - this.lastFireballTime >= FIREBALL_COOLDOWN) {
+        this.shootFireball();
+        this.lastFireballTime = now;
+      }
     }
     
     this.level.blocks.forEach(block => block.update(deltaTime));
     
     this.level.enemies.forEach(enemy => {
-      enemy.update(this.collisionDetector, this.level.tiles, deltaTime);
+      enemy.update(this.collisionDetector, this.level.tiles, deltaTime, this.camera.x, this.camera.width);
     });
     
     this.powerUps.forEach(powerUp => {
@@ -123,6 +143,31 @@ class GameEngine {
     
     if (this.player.x >= this.level.width - TILE_SIZE * 3) {
       this.gameState = GAME_STATES.WIN;
+      this.notifyStateChange();
+    }
+  }
+  
+  updateDeathSequence(deltaTime) {
+    this.player.update(this.input, this.collisionDetector, this.level.tiles, deltaTime);
+    
+    this.deathFadeTimer += deltaTime;
+    
+    const fadeStartTime = 0.8;
+    const fadeDuration = 0.7;
+    
+    if (this.deathFadeTimer > fadeStartTime) {
+      const fadeProgress = (this.deathFadeTimer - fadeStartTime) / fadeDuration;
+      this.deathFadeAlpha = Math.min(1, fadeProgress);
+    }
+    
+    if (this.deathFadeTimer >= this.deathFadeDuration) {
+      this.deathSequenceComplete = true;
+      
+      if (this.lives <= 0) {
+        this.gameState = GAME_STATES.GAME_OVER;
+      } else {
+        this.gameState = GAME_STATES.DEAD;
+      }
       this.notifyStateChange();
     }
   }
@@ -192,13 +237,13 @@ class GameEngine {
       if (!enemy.active || enemy.squished || enemy.dead) return;
       
       if (this.collisionDetector.checkEntityVsEntity(this.player, enemy)) {
-        const direction = this.collisionDetector.getOverlapDirection(this.player, enemy);
+        const direction = this.collisionDetector.getOverlapDirection(this.player, enemy, this.player.velY);
         
-        if (direction === 'bottom' && this.player.velY > 0) {
+        if (direction === 'stomp') {
           enemy.stomp();
-          this.player.velY = -8;
+          this.player.bounce();
           this.score += 100;
-        } else {
+        } else if (!this.player.invincible) {
           this.playerDeath();
         }
       }
@@ -226,15 +271,11 @@ class GameEngine {
     
     if (died) {
       this.lives--;
-      
-      setTimeout(() => {
-        if (this.lives <= 0) {
-          this.gameState = GAME_STATES.GAME_OVER;
-        } else {
-          this.gameState = GAME_STATES.DEAD;
-        }
-        this.notifyStateChange();
-      }, 2000);
+      this.gameState = GAME_STATES.DYING;
+      this.deathFadeAlpha = 0;
+      this.deathFadeTimer = 0;
+      this.deathSequenceComplete = false;
+      this.notifyStateChange();
     }
   }
   
@@ -244,6 +285,9 @@ class GameEngine {
     this.powerUps = [];
     this.fireballs = [];
     this.camera.x = 0;
+    this.deathFadeAlpha = 0;
+    this.deathFadeTimer = 0;
+    this.deathSequenceComplete = false;
     this.gameState = GAME_STATES.PLAYING;
     this.notifyStateChange();
   }
@@ -288,6 +332,11 @@ class GameEngine {
     });
     
     this.player.render(this.ctx, this.camera);
+    
+    if (this.gameState === GAME_STATES.DYING && this.deathFadeAlpha > 0) {
+      this.ctx.fillStyle = `rgba(0, 0, 0, ${this.deathFadeAlpha})`;
+      this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
   }
   
   notifyStateChange() {

@@ -20,10 +20,11 @@ class CollisionDetector {
   }
   
   checkEntityCollision(entity, tiles) {
-    const left = entity.x;
-    const right = entity.x + entity.width;
-    const top = entity.y;
-    const bottom = entity.y + entity.height;
+    const margin = 0.1;
+    const left = entity.x + margin;
+    const right = entity.x + entity.width - margin;
+    const top = entity.y + margin;
+    const bottom = entity.y + entity.height - margin;
     
     const collisions = {
       top: false,
@@ -34,9 +35,9 @@ class CollisionDetector {
     };
     
     const startCol = Math.floor(left / TILE_SIZE);
-    const endCol = Math.floor((right - 1) / TILE_SIZE);
+    const endCol = Math.floor(right / TILE_SIZE);
     const startRow = Math.floor(top / TILE_SIZE);
-    const endRow = Math.floor((bottom - 1) / TILE_SIZE);
+    const endRow = Math.floor(bottom / TILE_SIZE);
     
     for (let row = startRow; row <= endRow; row++) {
       for (let col = startCol; col <= endCol; col++) {
@@ -64,6 +65,9 @@ class CollisionDetector {
       hitWall: false,
       hitBlock: null
     };
+    
+    const originalX = entity.x;
+    const originalY = entity.y;
     
     entity.x += velX;
     let collisions = this.checkEntityCollision(entity, tiles);
@@ -105,6 +109,28 @@ class CollisionDetector {
     
     response.y = entity.y;
     
+    if (!response.grounded && velY >= 0) {
+      const groundCheckY = entity.y + entity.height + 2;
+      const leftCol = Math.floor((entity.x + 2) / TILE_SIZE);
+      const rightCol = Math.floor((entity.x + entity.width - 2) / TILE_SIZE);
+      const groundRow = Math.floor(groundCheckY / TILE_SIZE);
+      
+      if (groundRow >= 0 && groundRow < tiles.length) {
+        for (let col = leftCol; col <= rightCol; col++) {
+          if (col >= 0 && col < tiles[0].length) {
+            if (this.isSolid(tiles[groundRow][col])) {
+              const tileTop = groundRow * TILE_SIZE;
+              const distToGround = tileTop - (entity.y + entity.height);
+              if (distToGround <= 2 && distToGround >= 0) {
+                response.grounded = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    
     return response;
   }
   
@@ -117,9 +143,17 @@ class CollisionDetector {
     );
   }
   
-  getOverlapDirection(a, b) {
+  getOverlapDirection(a, b, aVelY) {
     const overlapX = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
     const overlapY = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+    
+    const aBottom = a.y + a.height;
+    const bTop = b.y;
+    const stompZone = bTop + b.height * 0.4;
+    
+    if (aVelY > 0 && aBottom <= stompZone && aBottom >= bTop - 4) {
+      return 'stomp';
+    }
     
     if (overlapX < overlapY) {
       return a.x < b.x ? 'right' : 'left';

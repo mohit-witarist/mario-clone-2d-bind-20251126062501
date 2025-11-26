@@ -2,6 +2,11 @@ import React from 'react';
 import { GAME_STATES, PLAYER_STATES } from '../game/constants';
 
 function GameUI({ gameState, score, coins, lives, time, playerState, onStart, onRestart, onRespawn }) {
+  const handleButtonClick = (callback) => (e) => {
+    e.stopPropagation();
+    callback();
+  };
+
   return (
     <>
       <div className="game-ui">
@@ -29,7 +34,7 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
         
         <div className="ui-section">
           <div className="lives-display">
-            {[...Array(lives)].map((_, i) => (
+            {[...Array(Math.max(0, lives))].map((_, i) => (
               <div key={i} className="life-icon"></div>
             ))}
           </div>
@@ -46,13 +51,14 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
           <div className="start-screen">
             <h1 className="start-title">SUPER MARIO</h1>
             <p className="start-subtitle">WORLD 1-1</p>
-            <button className="restart-btn" onClick={onStart}>
+            <button className="restart-btn" onClick={handleButtonClick(onStart)}>
               START GAME
             </button>
             <div className="controls-info">
               <p>ARROWS / WASD - Move</p>
-              <p>SPACE - Jump</p>
-              <p>SHIFT / X - Fireball</p>
+              <p>SPACE / W - Jump</p>
+              <p>SHIFT (left) / Z - Run</p>
+              <p>SHIFT (right) / X - Fireball</p>
             </div>
           </div>
         </div>
@@ -62,7 +68,7 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
         <div className="game-overlay">
           <h1 className="overlay-title">OOPS!</h1>
           <p className="overlay-score">Lives: {lives}</p>
-          <button className="restart-btn" onClick={onRespawn}>
+          <button className="restart-btn" onClick={handleButtonClick(onRespawn)}>
             CONTINUE
           </button>
         </div>
@@ -72,7 +78,7 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
         <div className="game-overlay">
           <h1 className="overlay-title">GAME OVER</h1>
           <p className="overlay-score">Final Score: {score}</p>
-          <button className="restart-btn" onClick={onRestart}>
+          <button className="restart-btn" onClick={handleButtonClick(onRestart)}>
             PLAY AGAIN
           </button>
         </div>
@@ -83,7 +89,7 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
           <h1 className="overlay-title" style={{ color: '#ffd700' }}>YOU WIN!</h1>
           <p className="overlay-score">Final Score: {score}</p>
           <p className="overlay-score">Coins: {coins}</p>
-          <button className="restart-btn" onClick={onRestart}>
+          <button className="restart-btn" onClick={handleButtonClick(onRestart)}>
             PLAY AGAIN
           </button>
         </div>

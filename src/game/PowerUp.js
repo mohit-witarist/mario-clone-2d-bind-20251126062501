@@ -7,13 +7,14 @@ class PowerUp {
     this.width = TILE_SIZE - 4;
     this.height = TILE_SIZE - 4;
     this.type = type;
-    this.velX = 2;
+    this.velX = type === 'mushroom' ? 2 : 0;
     this.velY = 0;
     this.active = true;
     this.emerging = true;
     this.emergeY = y;
     this.startY = y + TILE_SIZE;
     this.y = this.startY;
+    this.emergeSpeed = 0.8;
     
     this.animTimer = 0;
   }
@@ -22,7 +23,7 @@ class PowerUp {
     if (!this.active) return;
     
     if (this.emerging) {
-      this.y -= 1;
+      this.y -= this.emergeSpeed;
       if (this.y <= this.emergeY) {
         this.y = this.emergeY;
         this.emerging = false;
@@ -44,6 +45,10 @@ class PowerUp {
       if (response.hitWall) {
         this.velX = -this.velX;
       }
+      
+      if (this.y > 600) {
+        this.active = false;
+      }
     } else {
       this.animTimer += deltaTime;
     }
@@ -63,57 +68,50 @@ class PowerUp {
       ctx.beginPath();
       ctx.ellipse(
         screenPos.x + this.width / 2,
-        screenPos.y + 8,
+        screenPos.y + 10,
         this.width / 2,
-        10,
+        12,
         0, Math.PI, 0
       );
       ctx.fill();
       
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(screenPos.x + 8, screenPos.y + 6, 4, 0, Math.PI * 2);
-      ctx.arc(screenPos.x + this.width - 8, screenPos.y + 6, 4, 0, Math.PI * 2);
+      ctx.arc(screenPos.x + 8, screenPos.y + 6, 5, 0, Math.PI * 2);
+      ctx.arc(screenPos.x + this.width - 8, screenPos.y + 6, 5, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.fillStyle = '#f5deb3';
-      ctx.fillRect(screenPos.x + 6, screenPos.y + 12, this.width - 12, 14);
+      ctx.fillRect(screenPos.x + 6, screenPos.y + 14, this.width - 12, 12);
       
       ctx.fillStyle = '#000';
-      ctx.fillRect(screenPos.x + 10, screenPos.y + 16, 3, 3);
-      ctx.fillRect(screenPos.x + this.width - 13, screenPos.y + 16, 3, 3);
+      ctx.fillRect(screenPos.x + 10, screenPos.y + 18, 3, 3);
+      ctx.fillRect(screenPos.x + this.width - 13, screenPos.y + 18, 3, 3);
     } else if (this.type === 'fire_flower') {
       const bounce = Math.sin(this.animTimer * 5) * 2;
       
       ctx.fillStyle = '#00a800';
-      ctx.fillRect(screenPos.x + 12, screenPos.y + 14 + bounce, 4, 14);
+      ctx.fillRect(screenPos.x + 12, screenPos.y + 16 + bounce, 4, 12);
       
       ctx.fillStyle = COLORS.FIRE_FLOWER;
       ctx.beginPath();
-      ctx.arc(screenPos.x + this.width / 2, screenPos.y + 10 + bounce, 10, 0, Math.PI * 2);
+      ctx.arc(screenPos.x + this.width / 2, screenPos.y + 12 + bounce, 10, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.fillStyle = '#ffd700';
       ctx.beginPath();
-      ctx.arc(screenPos.x + this.width / 2, screenPos.y + 10 + bounce, 5, 0, Math.PI * 2);
+      ctx.arc(screenPos.x + this.width / 2, screenPos.y + 12 + bounce, 5, 0, Math.PI * 2);
       ctx.fill();
       
-      const petalPositions = [
-        { x: -8, y: -8 }, { x: 8, y: -8 },
-        { x: -10, y: 0 }, { x: 10, y: 0 },
-        { x: -8, y: 8 }, { x: 8, y: 8 }
-      ];
-      
       ctx.fillStyle = '#fff';
-      petalPositions.forEach(pos => {
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2 + this.animTimer * 2;
+        const px = screenPos.x + this.width / 2 + Math.cos(angle) * 8;
+        const py = screenPos.y + 12 + bounce + Math.sin(angle) * 8;
         ctx.beginPath();
-        ctx.arc(
-          screenPos.x + this.width / 2 + pos.x,
-          screenPos.y + 10 + bounce + pos.y,
-          4, 0, Math.PI * 2
-        );
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
         ctx.fill();
-      });
+      }
     }
   }
 }

@@ -4,12 +4,15 @@ class Fireball {
   constructor(x, y, direction) {
     this.x = x;
     this.y = y;
-    this.width = 12;
-    this.height = 12;
+    this.width = 10;
+    this.height = 10;
     this.velX = direction * FIREBALL_SPEED;
-    this.velY = 0;
+    this.velY = 2;
+    this.direction = direction;
     this.active = true;
-    this.bounceForce = -6;
+    this.bounceForce = -7;
+    this.bounceCount = 0;
+    this.maxBounces = 4;
     
     this.animFrame = 0;
     this.animTimer = 0;
@@ -18,29 +21,46 @@ class Fireball {
   update(collisionDetector, tiles, deltaTime) {
     if (!this.active) return;
     
-    this.velY += GRAVITY * 0.5;
+    this.velY += GRAVITY * 0.6;
     
-    const response = collisionDetector.resolveCollision(
-      this, this.velX, this.velY, tiles
-    );
+    const tempEntity = { x: this.x, y: this.y, width: this.width, height: this.height };
     
-    this.x = response.x;
-    this.y = response.y;
+    tempEntity.x += this.velX;
+    const hCollisions = collisionDetector.checkEntityCollision(tempEntity, tiles);
     
-    if (response.grounded) {
-      this.velY = this.bounceForce;
-    }
-    
-    if (response.hitWall) {
+    if (hCollisions.tiles.length > 0) {
       this.active = false;
+      return;
     }
     
-    if (this.x < 0 || this.y > 600) {
+    this.x = tempEntity.x;
+    
+    tempEntity.y += this.velY;
+    const vCollisions = collisionDetector.checkEntityCollision(tempEntity, tiles);
+    
+    if (vCollisions.tiles.length > 0) {
+      if (this.velY > 0) {
+        const tile = vCollisions.tiles[0];
+        this.y = tile.row * TILE_SIZE - this.height;
+        this.velY = this.bounceForce;
+        this.bounceCount++;
+        
+        if (this.bounceCount >= this.maxBounces) {
+          this.active = false;
+        }
+      } else {
+        this.active = false;
+      }
+    } else {
+      this.y = tempEntity.y;
+    }
+    
+    if (this.x < -50 || this.x > 10000 || this.y > 600) {
       this.active = false;
     }
     
     this.animTimer += deltaTime;
-    if (this.animTimer > 0.05) {
+    if (this.animTimer > 0.04) {
       this.animTimer = 0;
       this.animFrame = (this.animFrame + 1) % 4;
     }
@@ -63,7 +83,12 @@ class Fireball {
     
     ctx.fillStyle = '#ffd700';
     ctx.beginPath();
-    ctx.arc(0, 0, this.width / 4, 0, Math.PI * 2);
+    ctx.arc(0, 0, this.width / 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-1, -1, 2, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.restore();

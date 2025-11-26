@@ -16,7 +16,7 @@ class Level {
   }
   
   generateLevel() {
-    const levelWidth = 100;
+    const levelWidth = 200;
     const levelHeight = 15;
     
     this.tiles = Array(levelHeight).fill(null).map(() => 
@@ -31,6 +31,8 @@ class Level {
     this.addGap(15, 17);
     this.addGap(45, 47);
     this.addGap(75, 78);
+    this.addGap(120, 123);
+    this.addGap(160, 162);
     
     this.addQuestionBlock(8, 10, 'coin');
     this.addQuestionBlock(12, 10, 'mushroom');
@@ -65,6 +67,29 @@ class Level {
     this.addBrickRow(88, 7, 10);
     this.addQuestionBlock(92, 7, 'coin');
     
+    this.addQuestionBlock(105, 10, 'mushroom');
+    this.addBrickRow(103, 10, 5);
+    
+    this.addPipe(110, 2);
+    this.addPipe(115, 4);
+    
+    this.addStaircase(125, 6, true);
+    this.addStaircase(135, 6, false);
+    
+    this.addBrickRow(140, 8, 12);
+    this.addQuestionBlock(144, 8, 'coin');
+    this.addQuestionBlock(146, 8, 'fire');
+    this.addQuestionBlock(148, 8, 'coin');
+    
+    this.addPipe(155, 3);
+    
+    this.addStaircase(165, 4, true);
+    this.addBrickRow(170, 9, 8);
+    this.addQuestionBlock(173, 9, 'mushroom');
+    this.addQuestionBlock(175, 9, 'coin');
+    
+    this.addStaircase(185, 8, true);
+    
     this.addEnemy(10, levelHeight - 3);
     this.addEnemy(25, levelHeight - 3);
     this.addEnemy(26, levelHeight - 3);
@@ -74,6 +99,16 @@ class Level {
     this.addEnemy(71, levelHeight - 3);
     this.addEnemy(85, levelHeight - 3);
     this.addEnemy(90, 6);
+    this.addEnemy(100, levelHeight - 3);
+    this.addEnemy(108, levelHeight - 3);
+    this.addEnemy(118, levelHeight - 3);
+    this.addEnemy(130, levelHeight - 3);
+    this.addEnemy(131, levelHeight - 3);
+    this.addEnemy(142, 7);
+    this.addEnemy(150, levelHeight - 3);
+    this.addEnemy(168, levelHeight - 3);
+    this.addEnemy(172, 8);
+    this.addEnemy(180, levelHeight - 3);
     
     this.addCoin(11, 8);
     this.addCoin(13, 8);
@@ -86,6 +121,15 @@ class Level {
     this.addCoin(91, 5);
     this.addCoin(92, 5);
     this.addCoin(93, 5);
+    this.addCoin(104, 8);
+    this.addCoin(105, 8);
+    this.addCoin(106, 8);
+    this.addCoin(143, 6);
+    this.addCoin(144, 6);
+    this.addCoin(145, 6);
+    this.addCoin(171, 7);
+    this.addCoin(172, 7);
+    this.addCoin(173, 7);
     
     this.width = levelWidth * TILE_SIZE;
     this.height = levelHeight * TILE_SIZE;

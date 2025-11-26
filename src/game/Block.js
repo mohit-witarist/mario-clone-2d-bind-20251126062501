@@ -12,6 +12,7 @@ class Block {
     this.hit = false;
     this.animating = false;
     this.animY = 0;
+    this.animVelocity = 0;
     this.content = null;
     
     this.setContent();
@@ -36,7 +37,7 @@ class Block {
     
     this.hit = true;
     this.animating = true;
-    this.animY = -8;
+    this.animVelocity = -6;
     
     tiles[this.row][this.col] = BLOCK_TYPES.QUESTION_EMPTY;
     this.type = BLOCK_TYPES.QUESTION_EMPTY;
@@ -46,9 +47,12 @@ class Block {
   
   update(deltaTime) {
     if (this.animating) {
-      this.animY += 16 * deltaTime * 60;
+      this.animVelocity += 0.5;
+      this.animY += this.animVelocity;
+      
       if (this.animY >= 0) {
         this.animY = 0;
+        this.animVelocity = 0;
         this.animating = false;
       }
     }

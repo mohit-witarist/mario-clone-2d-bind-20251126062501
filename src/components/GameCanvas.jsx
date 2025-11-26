@@ -7,6 +7,7 @@ import { GAME_STATES } from '../game/constants';
 function GameCanvas() {
   const canvasRef = useRef(null);
   const gameRef = useRef(null);
+  const containerRef = useRef(null);
   const [gameData, setGameData] = useState({
     state: GAME_STATES.START,
     score: 0,
@@ -28,8 +29,15 @@ function GameCanvas() {
     return () => {
       if (gameRef.current) {
         gameRef.current.destroy();
+        gameRef.current = null;
       }
     };
+  }, []);
+  
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
   }, []);
   
   const gameLoop = useCallback((time) => {
@@ -45,11 +53,17 @@ function GameCanvas() {
     if (gameRef.current) {
       gameRef.current.start();
     }
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
   }, []);
   
   const handleRestart = useCallback(() => {
     if (gameRef.current) {
       gameRef.current.restart();
+    }
+    if (containerRef.current) {
+      containerRef.current.focus();
     }
   }, []);
   
@@ -57,10 +71,25 @@ function GameCanvas() {
     if (gameRef.current) {
       gameRef.current.respawn();
     }
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, []);
+  
+  const handleContainerClick = useCallback(() => {
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
   }, []);
   
   return (
-    <div className="game-wrapper">
+    <div 
+      ref={containerRef}
+      className="game-wrapper" 
+      tabIndex={0}
+      onClick={handleContainerClick}
+      style={{ outline: 'none' }}
+    >
       <canvas ref={canvasRef} />
       <GameUI
         gameState={gameData.state}

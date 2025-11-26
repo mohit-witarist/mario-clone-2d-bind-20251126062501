@@ -1,1 +1,1 @@
-# BindAI your Powerful AI Platform, Try Now!!!
+This project is created by Mohit using @BindAI

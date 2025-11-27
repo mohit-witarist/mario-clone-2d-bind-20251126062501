@@ -1,6 +1,6 @@
 import { 
   CANVAS_WIDTH, CANVAS_HEIGHT, TILE_SIZE,
-  GAME_STATES, LEVEL_TIME, BLOCK_TYPES, FIREBALL_COOLDOWN
+  GAME_STATES, BLOCK_TYPES, FIREBALL_COOLDOWN, PLAYER_STATES
 } from './constants';
 import Player from './Player';
 import Level from './Level';
@@ -8,6 +8,7 @@ import Camera from './Camera';
 import CollisionDetector from './CollisionDetector';
 import InputHandler from './InputHandler';
 import SpriteRenderer from './SpriteRenderer';
+import LevelManager from './LevelManager';
 import Coin from './Coin';
 import PowerUp from './PowerUp';
 import Fireball from './Fireball';
@@ -23,12 +24,13 @@ class GameEngine {
     this.score = 0;
     this.coins = 0;
     this.lives = 3;
-    this.time = LEVEL_TIME;
+    this.time = 300;
     
-    this.level = new Level();
-    this.player = new Player(64, CANVAS_HEIGHT - TILE_SIZE * 3);
-    this.camera = new Camera(this.level.width, this.level.height);
-    this.collisionDetector = new CollisionDetector(this.level);
+    this.levelManager = new LevelManager();
+    this.level = null;
+    this.player = null;
+    this.camera = null;
+    this.collisionDetector = null;
     this.input = new InputHandler();
     this.spriteRenderer = new SpriteRenderer(this.ctx);
     
@@ -38,15 +40,31 @@ class GameEngine {
     
     this.lastTime = 0;
     this.timeAccumulator = 0;
-    
     this.lastFireballTime = 0;
     
     this.deathFadeAlpha = 0;
     this.deathFadeTimer = 0;
     this.deathFadeDuration = 1.5;
-    this.deathSequenceComplete = false;
     
     this.onStateChange = null;
+    
+    this.initLevel();
+  }
+  
+  initLevel() {
+    const levelConfig = this.levelManager.getCurrentLevel();
+    this.level = new Level(levelConfig);
+    
+    const startPos = this.levelManager.getPlayerStart();
+    this.player = new Player(startPos.x, startPos.y);
+    
+    this.camera = new Camera(this.level.width, this.level.height);
+    this.collisionDetector = new CollisionDetector(this.level);
+    
+    this.time = this.levelManager.getTimeLimit();
+    this.powerUps = [];
+    this.fireballs = [];
+    this.animatedCoins = [];
   }
   
   start() {
@@ -60,17 +78,46 @@ class GameEngine {
     this.score = 0;
     this.coins = 0;
     this.lives = 3;
-    this.time = LEVEL_TIME;
-    this.level.reset();
-    this.player = new Player(64, CANVAS_HEIGHT - TILE_SIZE * 3);
-    this.powerUps = [];
-    this.fireballs = [];
-    this.animatedCoins = [];
+    this.levelManager.resetGame();
+    this.initLevel();
     this.camera.x = 0;
-    this.camera.setLevelWidth(this.level.width);
     this.deathFadeAlpha = 0;
     this.deathFadeTimer = 0;
-    this.deathSequenceComplete = false;
+    this.gameState = GAME_STATES.PLAYING;
+    this.notifyStateChange();
+  }
+  
+  respawn() {
+    this.deathFadeAlpha = 0;
+    this.deathFadeTimer = 0;
+    
+    if (this.levelManager.hasCheckpoint()) {
+      const checkpointPos = this.levelManager.getCheckpointPosition();
+      const savedState = this.levelManager.getSavedState();
+      
+      this.player = new Player(checkpointPos.x, checkpointPos.y - TILE_SIZE);
+      
+      if (savedState) {
+        if (savedState.playerState === PLAYER_STATES.BIG) {
+          this.player.state = PLAYER_STATES.BIG;
+          this.player.height = TILE_SIZE * 2 - 8;
+        } else if (savedState.playerState === PLAYER_STATES.FIRE) {
+          this.player.state = PLAYER_STATES.FIRE;
+          this.player.height = TILE_SIZE * 2 - 8;
+        }
+      }
+      
+      this.camera.x = Math.max(0, checkpointPos.x - CANVAS_WIDTH / 3);
+    } else {
+      const startPos = this.levelManager.getPlayerStart();
+      this.player = new Player(startPos.x, startPos.y);
+      this.camera.x = 0;
+    }
+    
+    this.time = this.levelManager.getTimeLimit();
+    this.powerUps = [];
+    this.fireballs = [];
+    
     this.gameState = GAME_STATES.PLAYING;
     this.notifyStateChange();
   }
@@ -79,8 +126,17 @@ class GameEngine {
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
     
+    if (this.levelManager.isTransitioning()) {
+      this.levelManager.updateTransition(deltaTime);
+      return;
+    }
+    
     if (this.gameState === GAME_STATES.DYING) {
       this.updateDeathSequence(deltaTime);
+      return;
+    }
+    
+    if (this.gameState === GAME_STATES.LEVEL_COMPLETE) {
       return;
     }
     
@@ -133,17 +189,18 @@ class GameEngine {
     
     this.level.coins.forEach(coin => coin.update(deltaTime));
     
+    this.level.checkpoints.forEach(cp => cp.update(deltaTime));
+    
+    if (this.level.flag) {
+      this.level.flag.update(deltaTime);
+    }
+    
     this.checkCollisions();
     
     this.camera.follow(this.player);
     
     if (this.player.y > CANVAS_HEIGHT + 100) {
       this.playerDeath();
-    }
-    
-    if (this.player.x >= this.level.width - TILE_SIZE * 3) {
-      this.gameState = GAME_STATES.WIN;
-      this.notifyStateChange();
     }
   }
   
@@ -161,8 +218,6 @@ class GameEngine {
     }
     
     if (this.deathFadeTimer >= this.deathFadeDuration) {
-      this.deathSequenceComplete = true;
-      
       if (this.lives <= 0) {
         this.gameState = GAME_STATES.GAME_OVER;
       } else {
@@ -233,11 +288,50 @@ class GameEngine {
       }
     });
     
+    this.level.checkpoints.forEach(checkpoint => {
+      if (!checkpoint.activated) {
+        const cpBounds = {
+          x: checkpoint.x,
+          y: checkpoint.y,
+          width: checkpoint.width,
+          height: checkpoint.height
+        };
+        
+        if (this.collisionDetector.checkEntityVsEntity(this.player, cpBounds)) {
+          checkpoint.activate();
+          this.levelManager.saveCheckpoint(
+            checkpoint.x,
+            checkpoint.y + TILE_SIZE,
+            this.player.state,
+            this.score,
+            this.coins
+          );
+        }
+      }
+    });
+    
+    if (this.level.flag && !this.level.flag.reached) {
+      const flagBounds = {
+        x: this.level.flag.x,
+        y: this.level.flag.y,
+        width: this.level.flag.width,
+        height: this.level.flag.height
+      };
+      
+      if (this.collisionDetector.checkEntityVsEntity(this.player, flagBounds)) {
+        this.reachFlag();
+      }
+    }
+    
     this.level.enemies.forEach(enemy => {
       if (!enemy.active || enemy.squished || enemy.dead) return;
       
       if (this.collisionDetector.checkEntityVsEntity(this.player, enemy)) {
-        const direction = this.collisionDetector.getOverlapDirection(this.player, enemy, this.player.velY);
+        const direction = this.collisionDetector.getOverlapDirection(
+          this.player, 
+          enemy, 
+          this.player.velY
+        );
         
         if (direction === 'stomp') {
           enemy.stomp();
@@ -249,21 +343,48 @@ class GameEngine {
       }
     });
     
-    this.fireballs.forEach(fireball => {
-      if (!fireball.active) return;
+    this.fireballs = this.fireballs.filter(fireball => {
+      if (!fireball.active) return false;
       
+      let hitEnemy = false;
       this.level.enemies.forEach(enemy => {
         if (!enemy.active || enemy.squished || enemy.dead) return;
         
         if (this.collisionDetector.checkEntityVsEntity(fireball, enemy)) {
           enemy.kill();
-          fireball.active = false;
+          hitEnemy = true;
           this.score += 200;
         }
       });
+      
+      if (hitEnemy) {
+        fireball.active = false;
+        return false;
+      }
+      
+      return fireball.active;
     });
+  }
+  
+  reachFlag() {
+    this.level.flag.reach();
+    this.score += 1000;
     
-    this.fireballs = this.fireballs.filter(f => f.active);
+    this.gameState = GAME_STATES.LEVEL_COMPLETE;
+    
+    setTimeout(() => {
+      if (this.levelManager.canAdvance()) {
+        this.levelManager.startTransition(() => {
+          this.levelManager.advanceLevel();
+          this.initLevel();
+          this.gameState = GAME_STATES.PLAYING;
+          this.notifyStateChange();
+        });
+      } else {
+        this.gameState = GAME_STATES.WIN;
+        this.notifyStateChange();
+      }
+    }, 1500);
   }
   
   playerDeath() {
@@ -274,22 +395,8 @@ class GameEngine {
       this.gameState = GAME_STATES.DYING;
       this.deathFadeAlpha = 0;
       this.deathFadeTimer = 0;
-      this.deathSequenceComplete = false;
       this.notifyStateChange();
     }
-  }
-  
-  respawn() {
-    this.time = LEVEL_TIME;
-    this.player = new Player(64, CANVAS_HEIGHT - TILE_SIZE * 3);
-    this.powerUps = [];
-    this.fireballs = [];
-    this.camera.x = 0;
-    this.deathFadeAlpha = 0;
-    this.deathFadeTimer = 0;
-    this.deathSequenceComplete = false;
-    this.gameState = GAME_STATES.PLAYING;
-    this.notifyStateChange();
   }
   
   render() {
@@ -319,6 +426,18 @@ class GameEngine {
       }
     });
     
+    this.level.checkpoints.forEach(checkpoint => {
+      if (this.camera.isVisible(checkpoint.x, checkpoint.y, checkpoint.width, checkpoint.height)) {
+        checkpoint.render(this.ctx, this.camera);
+      }
+    });
+    
+    if (this.level.flag) {
+      if (this.camera.isVisible(this.level.flag.x, this.level.flag.y, this.level.flag.width, this.level.flag.height)) {
+        this.level.flag.render(this.ctx, this.camera);
+      }
+    }
+    
     this.level.enemies.forEach(enemy => {
       if (enemy.active && this.camera.isVisible(enemy.x, enemy.y, enemy.width, enemy.height)) {
         enemy.render(this.ctx, this.camera);
@@ -337,6 +456,8 @@ class GameEngine {
       this.ctx.fillStyle = `rgba(0, 0, 0, ${this.deathFadeAlpha})`;
       this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     }
+    
+    this.levelManager.renderTransition(this.ctx, CANVAS_WIDTH, CANVAS_HEIGHT);
   }
   
   notifyStateChange() {
@@ -347,7 +468,10 @@ class GameEngine {
         coins: this.coins,
         lives: this.lives,
         time: this.time,
-        playerState: this.player.state
+        playerState: this.player.state,
+        levelNumber: this.levelManager.getCurrentLevelNumber(),
+        levelName: this.levelManager.getLevelName(),
+        totalLevels: this.levelManager.getTotalLevels()
       });
     }
   }
@@ -359,7 +483,10 @@ class GameEngine {
       coins: this.coins,
       lives: this.lives,
       time: this.time,
-      playerState: this.player.state
+      playerState: this.player.state,
+      levelNumber: this.levelManager.getCurrentLevelNumber(),
+      levelName: this.levelManager.getLevelName(),
+      totalLevels: this.levelManager.getTotalLevels()
     };
   }
   

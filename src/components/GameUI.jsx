@@ -1,7 +1,7 @@
 import React from 'react';
 import { GAME_STATES, PLAYER_STATES } from '../game/constants';
 
-function GameUI({ gameState, score, coins, lives, time, playerState, onStart, onRestart, onRespawn }) {
+function GameUI({ gameState, score, coins, lives, time, playerState, levelNumber, levelName, totalLevels, onStart, onRestart, onRespawn }) {
   const handleButtonClick = (callback) => (e) => {
     e.stopPropagation();
     callback();
@@ -24,7 +24,7 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
         
         <div className="ui-section">
           <span className="ui-label">WORLD</span>
-          <span className="ui-value">1-1</span>
+          <span className="ui-value">{levelName || `Level ${levelNumber}`}</span>
         </div>
         
         <div className="ui-section">
@@ -50,7 +50,7 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
         <div className="game-overlay">
           <div className="start-screen">
             <h1 className="start-title">SUPER MARIO</h1>
-            <p className="start-subtitle">WORLD 1-1</p>
+            <p className="start-subtitle">{totalLevels} WORLDS TO CONQUER</p>
             <button className="restart-btn" onClick={handleButtonClick(onStart)}>
               START GAME
             </button>
@@ -61,6 +61,13 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
               <p>SHIFT (right) / X - Fireball</p>
             </div>
           </div>
+        </div>
+      )}
+      
+      {gameState === GAME_STATES.LEVEL_COMPLETE && (
+        <div className="game-overlay level-complete">
+          <h1 className="overlay-title" style={{ color: '#00ff00' }}>LEVEL COMPLETE!</h1>
+          <p className="overlay-score">Score: {score}</p>
         </div>
       )}
       
@@ -86,7 +93,8 @@ function GameUI({ gameState, score, coins, lives, time, playerState, onStart, on
       
       {gameState === GAME_STATES.WIN && (
         <div className="game-overlay">
-          <h1 className="overlay-title" style={{ color: '#ffd700' }}>YOU WIN!</h1>
+          <h1 className="overlay-title" style={{ color: '#ffd700' }}>CONGRATULATIONS!</h1>
+          <p className="overlay-score">You completed all {totalLevels} worlds!</p>
           <p className="overlay-score">Final Score: {score}</p>
           <p className="overlay-score">Coins: {coins}</p>
           <button className="restart-btn" onClick={handleButtonClick(onRestart)}>

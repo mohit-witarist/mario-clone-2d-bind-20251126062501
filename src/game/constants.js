@@ -68,5 +68,7 @@ export const GAME_STATES = {
   DEAD: 'dead',
   DYING: 'dying',
   GAME_OVER: 'game_over',
-  WIN: 'win'
+  WIN: 'win',
+  LEVEL_COMPLETE: 'level_complete',
+  TRANSITIONING: 'transitioning'
 };

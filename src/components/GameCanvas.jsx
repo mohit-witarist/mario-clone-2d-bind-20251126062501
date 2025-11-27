@@ -14,7 +14,10 @@ function GameCanvas() {
     coins: 0,
     lives: 3,
     time: 300,
-    playerState: 'small'
+    playerState: 'small',
+    levelNumber: 1,
+    levelName: 'World 1-1',
+    totalLevels: 10
   });
   
   useEffect(() => {
@@ -98,6 +101,9 @@ function GameCanvas() {
         lives={gameData.lives}
         time={gameData.time}
         playerState={gameData.playerState}
+        levelNumber={gameData.levelNumber}
+        levelName={gameData.levelName}
+        totalLevels={gameData.totalLevels}
         onStart={handleStart}
         onRestart={handleRestart}
         onRespawn={handleRespawn}
